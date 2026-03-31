@@ -121,18 +121,22 @@ def get_og_gt_path():
     # Use realpath to follow symlinks to get the actual script location
     script_path = os.path.realpath(__file__)
     script_dir = os.path.dirname(script_path)
-    gt_path = os.path.join(
-        script_dir, "../node_modules/@withgraphite/graphite-cli/graphite.js"
+    candidate_paths = [
+        os.path.join(script_dir, "../node_modules/@withgraphite/graphite-cli/bin/gt.js"),
+        os.path.join(script_dir, "../node_modules/@withgraphite/graphite-cli/graphite.js"),
+    ]
+
+    for gt_path in candidate_paths:
+        if os.path.isfile(gt_path):
+            return f"node {shlex.quote(gt_path)}"
+
+    print(
+        f"{COLORS['RED']}❌ Error: Could not find the bundled Graphite CLI at any supported path:{COLORS['RESET']}"
     )
-
-    if not os.path.isfile(gt_path):
-        print(
-            f"{COLORS['RED']}❌ Error: Could not find the bundled Graphite CLI at {gt_path}{COLORS['RESET']}"
-        )
-        print("Please ensure the package installation completed successfully.")
-        sys.exit(1)
-
-    return gt_path
+    for gt_path in candidate_paths:
+        print(f"  - {gt_path}")
+    print("Please ensure the package installation completed successfully.")
+    sys.exit(1)
 
 
 OG_GT_PATH = get_og_gt_path()

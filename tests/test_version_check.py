@@ -6,6 +6,7 @@ import os
 import tempfile
 import json
 import threading
+import shlex
 from unittest.mock import patch, MagicMock, mock_open
 from datetime import datetime, timedelta
 
@@ -18,6 +19,7 @@ from gt_commands import (
     save_version_cache,
     should_check_version,
     compare_versions,
+    get_og_gt_path,
     get_latest_wrapper_version,
     check_for_updates_async,
     display_update_notification,
@@ -96,6 +98,40 @@ class TestVersionChecking(unittest.TestCase):
         self.assertFalse(compare_versions("invalid", "1.0.0"))
         self.assertFalse(compare_versions("1.0.0", "invalid"))
         self.assertFalse(compare_versions("1.0", "1.0.0"))
+
+    @patch('gt_commands.os.path.isfile')
+    @patch('gt_commands.os.path.realpath')
+    def test_get_og_gt_path_prefers_new_entrypoint(self, mock_realpath, mock_isfile):
+        """Test bundled Graphite path resolution prefers the current npm entrypoint."""
+        mock_realpath.return_value = "/tmp/repo/bin/gt_commands.py"
+        new_path = os.path.join(
+            "/tmp/repo/bin", "../node_modules/@withgraphite/graphite-cli/bin/gt.js"
+        )
+        legacy_path = os.path.join(
+            "/tmp/repo/bin", "../node_modules/@withgraphite/graphite-cli/graphite.js"
+        )
+        mock_isfile.side_effect = lambda path: path == new_path or path == legacy_path
+
+        result = get_og_gt_path()
+
+        self.assertEqual(result, f"node {shlex.quote(new_path)}")
+
+    @patch('gt_commands.os.path.isfile')
+    @patch('gt_commands.os.path.realpath')
+    def test_get_og_gt_path_falls_back_to_legacy_entrypoint(self, mock_realpath, mock_isfile):
+        """Test bundled Graphite path resolution still supports older installs."""
+        mock_realpath.return_value = "/tmp/repo/bin/gt_commands.py"
+        new_path = os.path.join(
+            "/tmp/repo/bin", "../node_modules/@withgraphite/graphite-cli/bin/gt.js"
+        )
+        legacy_path = os.path.join(
+            "/tmp/repo/bin", "../node_modules/@withgraphite/graphite-cli/graphite.js"
+        )
+        mock_isfile.side_effect = lambda path: path == legacy_path and path != new_path
+
+        result = get_og_gt_path()
+
+        self.assertEqual(result, f"node {shlex.quote(legacy_path)}")
         
     @patch('gt_commands.load_version_cache')
     def test_should_check_version_no_cache(self, mock_load_cache):

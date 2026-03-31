@@ -21,7 +21,7 @@
   "author": "ccoleman",
   "license": "MIT",
   "dependencies": {
-    "@withgraphite/graphite-cli": "1.4.3"
+    "@withgraphite/graphite-cli": "1.8.3"
   },
   "files": [
     "bin/",
